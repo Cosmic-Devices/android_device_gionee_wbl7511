@@ -1,2 +1,2 @@
 PRODUCT_MAKEFILES := \
-    $(LOCAL_DIR)/cos.mk
+    $(LOCAL_DIR)/wbl7511.mk

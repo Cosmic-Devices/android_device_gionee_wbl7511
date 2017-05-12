@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-ifneq ($(filter angler, $(TARGET_DEVICE)),)
+ifneq ($(filter wbl7511, $(TARGET_DEVICE)),)
 
 LOCAL_PATH := $(call my-dir)
 

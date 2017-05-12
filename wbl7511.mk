@@ -38,6 +38,28 @@ $(call inherit-product, $(SRC_TARGET_DIR)/product/core_64_bit.mk)
 $(call inherit-product, $(SRC_TARGET_DIR)/product/full_base_telephony.mk)
 $(call inherit-product, $(SRC_TARGET_DIR)/product/languages_full.mk)
 
+
+
+# Inherit some common CM stuff.
+$(call inherit-product, vendor/cos/common.mk)
+
+# Device display
+TARGET_SCREEN_HEIGHT := 1280
+TARGET_SCREEN_WIDTH := 720
+
+# Device identifier
+PRODUCT_BRAND := Gionee
+PRODUCT_DEVICE := wbl7511
+PRODUCT_MANUFACTURER := Gionee
+PRODUCT_MODEL := cos_wbl7511
+PRODUCT_NAME := wbl7511
+PRODUCT_RELEASE_NAME := cos_wbl7511
+PRODUCT_RESTRICT_VENDOR_FILES := false
+
+COS_RELEASE=true
+
+
+
 # Vendor product configurations
 $(call inherit-product-if-exists, vendor/gionee/wbl7511/wbl7511-vendor.mk)
 
