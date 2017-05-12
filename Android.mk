@@ -14,9 +14,9 @@
 # limitations under the License.
 #
 
-LOCAL_PATH := $(call my-dir)
+ifneq ($(filter angler, $(TARGET_DEVICE)),)
 
-ifeq ($(TARGET_DEVICE),wbl7511)
+LOCAL_PATH := $(call my-dir)
 
 include $(call all-makefiles-under,$(LOCAL_PATH))
 
