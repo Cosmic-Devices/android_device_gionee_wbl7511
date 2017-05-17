@@ -1,0 +1,26 @@
+[
+  {
+    "remote": "github",
+    "repository": "Cosmic-Devices/android_device_gionee_wbl7511",
+    "target_path": "device/gionee/wbl7511",
+    "branch": "master"
+  },
+  {
+    "remote": "github",
+    "repository": "Cosmic-Devices/android_vendor_gionee_wbl7511",
+    "target_path": "vendor/gionee/wbl7511",
+    "branch": "master"
+  },
+  {
+    "remote": "github",
+    "repository" : "LineageOS/android_external_ebtables",
+    "target_path": "external/ebtables",
+    "branch"     : "cm-14.1"
+  },
+  {
+    "remote": "github",
+    "repository" : "sultanxda/android_packages_apps_Snap",
+    "target_path": "packages/apps/Snap",
+    "branch"     : "cm-13.0-sultan"
+  },
+]
