@@ -1,6 +1,6 @@
 #ifndef _BDROID_BUILDCFG_H
 #define _BDROID_BUILDCFG_H
 
-#define BTM_DEF_LOCAL_NAME   "GIONEE SPLUS"
+define BTM_DEF_LOCAL_NAME   "GIONEE SPLUS"
 
 #endif
