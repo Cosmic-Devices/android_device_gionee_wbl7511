@@ -1,9 +1,7 @@
 import /init.environ.rc
-import init.fon.rc
+import init.ssd.rc
 import init.trustonic.rc
-import init.nvdata.rc
 import init.microtrust.rc
-import factory_init.usb.rc
 
 on early-init
     # Set init and its forked children's oom_adj.
@@ -332,11 +330,6 @@ on post-fs-data
     mkdir /data/nvram/md  0770 root system
     mkdir /data/nvram/md2 0770 root system
 
-#  Build-in Modified - S
-#    insmod /system/lib/modules/ccci_plat.ko
-#    insmod /system/lib/modules/ccci.ko
-#  Build-in Modified - E
-#   chown ccci ccci /sys/class/BOOT/BOOT/boot/md
     chown radio radio /sys/kernel/ccci/boot
     
     #set mlock limit to infinate (for m4u operation)
@@ -584,4 +577,50 @@ service statusd /system/bin/statusd -f [/system/bin/flashlessd -l -m 0]
     user radio
     group radio cache inet misc system
 
+#mass_storage,adb,acm
+on property:ro.boot.usbconfig=*
+    write /sys/class/android_usb/android0/enable 0
+//lenovo-sw yexh1 change some definitions
+    write /sys/class/android_usb/android0/idVendor 17EF
+    write /sys/class/android_usb/android0/idProduct 74ED
+    write /sys/class/android_usb/android0/iSerial " "
+//lenovo-sw yexh1 
+
+    write /sys/class/android_usb/android0/f_acm/instances 1
+    write /sys/class/android_usb/android0/functions mass_storage,adb,acm
+    write /sys/class/android_usb/android0/enable 1
+    start adbd
+    setprop sys.usb.acm_idx 1
+
+#singloe modem comport for factory mode   
+on property:sys.usb.config=gs3,dual_acm
+    write /sys/class/android_usb/android0/enable 0
+    write /sys/class/android_usb/android0/idVendor $sys.usb.vid
+    write /sys/class/android_usb/android0/idProduct 202E
+    write /sys/class/android_usb/android0/f_acm/port_index 1,4
+    write /sys/devices/platform/mt_usb/saving 1
+    write /sys/class/android_usb/android0/functions mass_storage,adb,acm
+    write /sys/class/android_usb/android0/enable 1
+    chown system radio /dev/ttyGS3
+    chmod 0660 /dev/ttyGS3
+    start adbd
+    setprop sys.usb.state $sys.usb.config
+    setprop sys.usb.acm_idx 1,4
+    
+#dual modem comport for factory mode
+on property:sys.usb.config=gs1gs3,dual_acm
+    write /sys/class/android_usb/android0/enable 0
+    write /sys/class/android_usb/android0/idVendor $sys.usb.vid
+    write /sys/class/android_usb/android0/idProduct 202F
+    write /sys/class/android_usb/android0/f_acm/port_index 1,2,4
+    write /sys/devices/platform/mt_usb/saving 1
+    write /sys/class/android_usb/android0/functions adb,acm
+    write /sys/class/android_usb/android0/enable 1
+    chown system radio /dev/ttyGS3
+    chmod 0660 /dev/ttyGS3
+    chown system radio /dev/ttyGS1
+    chmod 0660 /dev/ttyGS1
+    start adbd
+    setprop sys.usb.state $sys.usb.config
+    setprop sys.usb.acm_idx 1,2,4
 #INTERNAL_END

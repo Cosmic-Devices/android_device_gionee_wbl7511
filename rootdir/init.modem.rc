@@ -11,14 +11,16 @@ on post-fs-data
     # Modem related device nodes
     mkdir /data/nvram/md  0770 root system
 
-#  Build-in Modified - S
-#    insmod /system/lib/modules/ccci_plat.ko
-#    insmod /system/lib/modules/ccci.ko
-#  Build-in Modified - E
-#   chown radio radio /sys/class/BOOT/BOOT/boot/md
     chown radio radio /sys/kernel/ccci/boot
+    chown radio radio /dev/ccci_fs
+    chown radio radio /dev/ccci_ioctl0
+    chown radio radio /dev/ccci_ioctl1
+    chown radio radio /dev/ccci_ipc_1220_0
+    chown radio radio /dev/ccci_monitor
+    chown media audio /dev/ccci_aud
+    chmod 660 /dev/ccci_aud
 
-#SeLinux
+    # Selinux
     mkdir /data/ccci_cfg 0770 system radio
     restorecon /data/ccci_cfg
     restorecon_recursive /protect_f
@@ -61,9 +63,7 @@ service ril-daemon-mtk /system/bin/mtkrild
     socket rild-mtk-ut-2 stream 660 radio net_bt
     socket rild-mtk-modem stream 660 radio system
     socket rild-atci stream 660 root radio
-    socket rild-mal stream 660 radio system
-    socket rild-mal-at stream 660 radio system
-    socket rild-vsim stream 660 root radio
+
     socket sap_uim_socket1 stream 660 bluetooth bluetooth
     socket sap_uim_socket2 stream 660 bluetooth bluetooth
     socket sap_uim_socket3 stream 660 bluetooth bluetooth
@@ -107,20 +107,20 @@ service permission_check /system/bin/permission_check
     oneshot
 
 service ccci_fsd /system/bin/ccci_fsd 0
-    user radio
+    user root
     group radio system
     class core
     oneshot
 
 service ccci_mdinit /system/bin/ccci_mdinit 0
-    user system
+    user root
     group radio system
     class core
     oneshot
 
 service ccci_rpcd /system/bin/ccci_rpcd 0
-    user radio
-    group radio system
+    user root
+    group radio cache inet misc
     class core
     oneshot
 

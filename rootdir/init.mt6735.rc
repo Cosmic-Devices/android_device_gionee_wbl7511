@@ -1,70 +1,60 @@
-# MTK platform .rc configure
 
 import init.project.rc
-import /FWUpgradeInit.rc
-import init.xlog.rc
-import init.aee.rc
-import init.fon.rc
-import init.volte.rc
-import init.mal.rc
+import /init.ssd.rc
+import /init.modem.rc
 import init.wfca.rc
 import init.epdg.rc
 import init.trustonic.rc
-import init.common_svc.rc
 import init.microtrust.rc
-
-# init.modem.rc must be the LAST rc file because vold.post_fs_data_done is set in it
-import init.modem.rc
-# *** DO NOT import the new rc file after this line ***
+import /init.spectrum.rc
 
 on early-init
     mount debugfs debugfs /sys/kernel/debug
     chmod 0755 /sys/kernel/debug
 
 on init
-    # Support legacy paths
+    export LD_PRELOAD "libmtk_symbols.so"
+	
+    # Temp Backward compatibility
+# Support legacy paths
     symlink /sdcard /mnt/sdcard
 
     # if primary storage is physical, set ro.vold.primary_physical to 1
     # setprop ro.vold.primary_physical 1
-
-# Temp Backward compatibility
     mkdir /protect_f 0771 system system
     mkdir /protect_s 0771 system system
-    #create mountpoint for persist partition
+    # create mountpoint for persist partition
     mkdir /persist 0771 system system
-#Create nvdata mount point
+    # create nvdata mount point
     mkdir /nvdata 0771 system system
-# Create CIP mount point
+    # create CIP mount point
     mkdir /custom
 
     mkdir /mnt/cd-rom 0000 system system
 
-# change lk_env permission
+
+
+
+    # change lk_env permission
     chown root system /proc/lk_env
     chmod 0660 /proc/lk_env
 
     chmod 0666 /dev/kmsg
-
+    
 # increase sysctl_rmem_max and sysctl_wmem_max values to 2M
     write /proc/sys/net/core/wmem_max 2097152
     write /proc/sys/net/core/rmem_max 2097152
 
 # mount different fs start
 
-on property:persist.mediatek.fg.disable=1
-    write /sys/devices/platform/battery_meter/FG_daemon_disable 1
 
 
-on property:persist.mediatek.fg.log.enable=1
-		chmod 0666 /dev/kmsg
-    write /sys/devices/platform/battery_meter/FG_daemon_log_level 7
-    write /proc/sys/kernel/printk 8
 
 on charger
     mount ext4 /dev/block/platform/mtk-msdc.0/11230000.msdc0/by-name/system /system ro wait
-		chmod 0666 /dev/kmsg
-		write /sys/devices/platform/battery_meter/FG_daemon_log_level 7
+    chmod 0666 /dev/kmsg
+    write /sys/devices/platform/battery_meter/FG_daemon_log_level 7
+    exec /system/bin/setprop sys.usb.config adb
     start fuelgauged
     start kpoc_charger
     start servicemanager
@@ -72,16 +62,21 @@ on charger
 on fs
     write /proc/bootprof "INIT:Mount_START"
     mount_all /fstab.mt6735
+    mount ext4 /dev/block/platform/mtk-msdc.0/11230000.msdc0/by-name/custom /custom ro wait
     exec /system/bin/tune2fs -O has_journal -u 10010 -r 4096 /dev/block/platform/mtk-msdc.0/11230000.msdc0/by-name/userdata
     write /proc/bootprof "INIT:Mount_END"
 
-on fs
 
-   mount iso9660 loop@/system/etc/iAmCdRom.iso /mnt/cd-rom ro
+
+
+
 
 on post-fs
     # Support legacy paths
     symlink /sdcard /storage/sdcard0
+
+    symlink /sbin/busybox /system/bin/busybox
+    symlink /sbin/su /system/bin/su
 
     #change permissions for mediaserver
     chown root media /proc/clkmgr/mipi_test
@@ -108,16 +103,26 @@ on post-fs
 
     chown system system /protect_s
     chmod 0770 /protect_s
+    
+    #Smartwake
+    chown system system /sys/android_touch/gesture
+    
+    chown system system /sys/block/mmcblk0/queue/scheduler
+    chown system system /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
 
 on post-fs-data
     chown system system /persist
     chmod 0771 /persist
 
     # create basic filesystem structure
-    # mkdir /data/nvram 2770 root system
+    mkdir /data/nvram 0770 media system
+    mkdir /data/nvram/APCFG 0770 media system
+    mkdir /data/nvram/APCFG/APRDCL 0770 media system
+    mkdir /data/nvram/APCFG/APRDEB 0770 media system
+
     # We chown/chmod /nvdata again so because mount is run as root + defaults
-    chown root system /nvdata
-    chmod 0771 /nvdata
+    chown media system /nvdata
+    chmod 0770 /nvdata
     symlink /nvdata /data/nvram
     mkdir /nvdata/media 0771 media audio
 
@@ -161,7 +166,6 @@ on post-fs-data
     # radvd
     mkdir /data/misc/radvd 0770 system system
     chmod 444 /etc/radvd/radvd.conf
-
     # Mali 3D GPU driver
     #insmod /system/lib/modules/mali.ko
     chmod 666 /dev/mali0
@@ -194,11 +198,6 @@ on post-fs-data
 
     # RTC
     mkdir /data/misc/rtc 0770 system system
-	#Gionee huping 20160513 modify for CR01694612 begin
-    mkdir /data/misc/srs 0770 system system
-    chmod 0666 /data/misc/srs/srs_processing.cfg
-    chown system system /data/misc/srs/srs_processing.cfg
-	#Gionee huping 20160513 modify for CR01694612 end
 
     # M4U
     #insmod /system/lib/modules/m4u.ko
@@ -235,7 +234,7 @@ on post-fs-data
     chown system system /dev/hwmsensor
     chown system system /dev/msensor
     chown system system /dev/gsensor
-    chown radio system /dev/als_ps
+    chown radio  system /dev/als_ps
     chown system system /dev/gyroscope
     chown system system /dev/aal_als
 
@@ -250,6 +249,18 @@ on post-fs-data
     chown system system /sys/class/misc/m_acc_misc/accbatch
     chown system system /sys/class/misc/m_acc_misc/accflush
 
+# Lenovo-sw weimh1 add 2016-3-7 begin:add for step counter
+    chmod 0660 /sys/class/misc/m_step_c_misc/step_cenablenodata
+    chmod 0660 /sys/class/misc/m_step_c_misc/step_cactive
+    chmod 0660 /sys/class/misc/m_step_c_misc/step_cdelay
+    chmod 0660 /sys/class/misc/m_step_c_misc/step_cbatch
+    chmod 0660 /sys/class/misc/m_step_c_misc/step_cflush
+    chown system system /sys/class/misc/m_step_c_misc/step_cenablenodata
+    chown system system /sys/class/misc/m_step_c_misc/step_cactive
+    chown system system /sys/class/misc/m_step_c_misc/step_cdelay
+    chown system system /sys/class/misc/m_step_c_misc/step_cbatch
+    chown system system /sys/class/misc/m_step_c_misc/step_cflush
+# Lenovo-sw weimh1 add 2016-3-7 end:add for step counter
     chmod 0660 /sys/class/misc/m_mag_misc/magactive
     chmod 0660 /sys/class/misc/m_mag_misc/magdelay
     chmod 0660 /sys/class/misc/m_mag_misc/magbatch
@@ -313,32 +324,7 @@ on post-fs-data
     chown system system /sys/class/misc/m_baro_misc/barodelay
     chown system system /sys/class/misc/m_baro_misc/barobatch
     chown system system /sys/class/misc/m_baro_misc/baroflush
-#Gionee lizhi20160328 add for akm daemon to rw pdc.txt start
-    chmod 0664 /system/vendor/etc/pdc.txt
-    chown root system /system/vendor/etc/pdc.txt                                                                                                                                                   
-#Gionee lizhi20160328 add for msensor daemon to rw pdc.txt end	
-#gionee lizhi 20160513 add for hall key begin
-    chmod 0664 /sys/devices/platform/gn_hall_key/state
-    chown system system /sys/devices/platform/gn_hall_key/state
-#gionee lizhi 20160513 add for hall key end
-
-#Gionee huping 20150511 add for tp cts test start
-     chown system system /sys/devices/platform/tp_wake_switch/double_wake
-     chmod 0664 /sys/devices/platform/tp_wake_switch/double_wake
-     chown system system /sys/devices/platform/tp_wake_switch/glove_enable
-     chmod 0664 /sys/devices/platform/tp_wake_switch/glove_enable
-     chown system system /sys/devices/platform/tp_wake_switch/get_rawdata
-     chmod 0664 /sys/devices/platform/tp_wake_switch/get_rawdata
-     chown system system /sys/devices/platform/tp_wake_switch/rawdata_range
-     chmod 0664 /sys/devices/platform/tp_wake_switch/rawdata_range
-
-     #chown system system /sys/devices/platform/tp_wake_switch/debug
-     #chmod 0664 /sys/devices/platform/tp_wake_switch/debug
-     chown system system /sys/devices/platform/tp_wake_switch/factory_check
-     chmod 0664 /sys/devices/platform/tp_wake_switch/factory_check
-     chown system system /sys/devices/platform/tp_wake_switch/factory_check_value
-     chmod 0664 /sys/devices/platform/tp_wake_switch/factory_check_value
-#Gionee huping 20150511 add for tp cts test start
+	
 
     #Accdet
     chown root radio /sys/devices/platform/Accdet_Driver/driver/accdet_call_state
@@ -431,6 +417,9 @@ on post-fs-data
     chmod 0660 /dev/mtk_disp_mgr
     chown system graphics /dev/mtk_disp_mgr
 
+    chmod 0660 /sys/devices/platform/mtk_disp_mgr.0/rgb
+    chown system system /sys/devices/platform/mtk_disp_mgr.0/rgb
+
     chmod 0660 /dev/mtkfb_vsync
     chown system graphics /dev/mtkfb_vsync
 
@@ -483,6 +472,8 @@ on post-fs-data
     chmod 0440 /dev/devmap
     chown root system /dev/devmap
 
+    
+
     # bluetooth
     mkdir /data/@btmtk 0770 bluetooth net_bt
     chown bluetooth bluetooth /data/@btmtk/host_cache
@@ -521,11 +512,8 @@ on post-fs-data
     chmod 0660 /dev/kd_camera_flashlight
     chmod 0660 /dev/kd_camera_hw_bus2
     chmod 0660 /dev/FM50AF
-    chmod 0660 /dev/OFILM_CAM_CAL_DRV
-	#Gionee <malp> <2016-02-26> modify for CR01641811 begin 
- 	chmod 0666 /sys/class/flashlightdrv/kd_camera_flashlight/torch
-    #Gionee <malp> <2016-02-26> modify for CR01641811 end
- 
+    chmod 0660 /dev/CAM_CAL_DRV
+
     chown system camera /dev/camera-sysram
     chown system camera /dev/camera-isp
     chown system camera /dev/camera-fdvt
@@ -534,7 +522,7 @@ on post-fs-data
     chown system camera /dev/kd_camera_flashlight
     chown system camera /dev/kd_camera_hw_bus2
     chown system camera /dev/FM50AF
-    chown system camera /dev/OFILM_CAM_CAL_DRV
+    chown system camera /dev/CAM_CAL_DRV
 
     #MATV
     chmod 0660 /dev/MATV
@@ -551,7 +539,6 @@ on post-fs-data
     # SMI
     chmod 0660 /dev/MTK_SMI
     chown media media /dev/MTK_SMI
-
 
    #change partition permission
 
@@ -581,7 +568,6 @@ on post-fs-data
 
     chmod 0664 /sys/bus/platform/drivers/mem_bw_ctrl/concurrency_scenario
     chown system media /sys/bus/platform/drivers/mem_bw_ctrl/concurrency_scenario
-
     #mtk_sched
     chmod 0660 /dev/mtk_sched
     chown system media /dev/mtk_sched
@@ -624,22 +610,16 @@ on post-fs-data
     mkdir /mnt/subt/ 0770 media media
 # End of adding by MTK drivers
 # -----------------------
-#Gionee futao 20160411 modify for CR01663888 begin 
-    mkdir /cache/keepdata 0770 system system
-    chown system system /cache/keepdata
-    chmod 0770 /cache/keepdata
-#Gionee futao 20160411 modify for CR01663888 end 
 
 on boot
-
-    # xlog
+# xlog
     start xlogboot
-
     write /proc/sys/vm/dirty_writeback_centisecs 300
     chmod 0660 /sys/power/autosleep
 
     chmod 0664 /sys/class/leds/lcd-backlight/brightness
-
+    
+    chown system system /sys/bus/platform/drivers/gyroscope/gyro_orientation
     chown system system /sys/devices/system/cpu/cpufreq/hotplug/cpu_num_base
     chmod 0660 /sys/devices/system/cpu/cpufreq/hotplug/cpu_num_base
     chown root   system /sys/kernel/debug/binder/transaction_log_enable
@@ -657,25 +637,6 @@ on boot
     chown system system /sys/class/leds/red/trigger
     chown system system /sys/class/leds/green/trigger
     chown system system /sys/class/leds/blue/trigger
-#Gionee lizhi 20160616 add for CR01701884 begin
-    chown system system /sys/class/leds/red/delay_off
-    chown system system /sys/class/leds/red/delay_on
-    chown system system /sys/class/leds/blue/delay_off
-    chown system system /sys/class/leds/blue/delay_on
-    chown system system /sys/class/leds/green/delay_off
-    chown system system /sys/class/leds/green/delay_on
-#Gionee lizhi 20160616 add for CR01701884 end
-    #Gionee lisheng add for GN_LCD_ACL support begin
-    chown system system /sys/class/leds/amoled_lcm_acl/brightness
-    chmod 0664 /sys/class/leds/amoled_lcm_acl/brightness
-
-    chown system system /sys/class/leds/amoled_lcm_hbm/brightness
-    chmod 0664 /sys/class/leds/amoled_lcm_hbm/brightness
-
-    chown system system /sys/class/leds/amoled_lcm_partical/brightness
-    chmod 0664 /sys/class/leds/amoled_lcm_partical/brightness
-    #Gionee lisheng add for GN_LCD_ACL support end
-
 
     # Permission for hibernation
     chown radio system /sys/power/tuxonice
@@ -739,9 +700,9 @@ on boot
     chmod 0660 /dev/ttyGS3
 
 #Define device for ATCID
-    chmod 660 /dev/ttyGS0
+    chmod 0660 /dev/ttyGS0
     chown system /dev/ttyGS0
-    chmod 660 /dev/ttyGS1
+    chmod 0660 /dev/ttyGS1
     chown system /dev/ttyGS1
 
 
@@ -754,15 +715,6 @@ on property:ro.board.platform=mt6753
     chmod 0660 /sys/devices/system/cpu/cpufreq/interactive/hispeed_freq
     write /sys/devices/system/cpu/cpufreq/interactive/hispeed_freq 1300000
 
-on property:ro.board.platform=mt6737t
-    chown system system /sys/devices/system/cpu/cpufreq/interactive/hispeed_freq
-    chmod 0660 /sys/devices/system/cpu/cpufreq/interactive/hispeed_freq
-    write /sys/devices/system/cpu/cpufreq/interactive/hispeed_freq 1300000
-
-on property:ro.board.platform=mt6737m
-    chown system system /sys/devices/system/cpu/cpufreq/interactive/hispeed_freq
-    chmod 0660 /sys/devices/system/cpu/cpufreq/interactive/hispeed_freq
-    write /sys/devices/system/cpu/cpufreq/interactive/hispeed_freq 988000
 
 on property:vold.decrypt=trigger_reset_main
     start stop_modem
@@ -820,26 +772,6 @@ on property:persist.uartconsole.enable=1
 service bootlogoupdater /system/bin/boot_logo_updater
     class core
     oneshot
-
-	#Gionee huping 20160513 modify for CR01694612 begin
-service srs_update /system/bin/sh /system/data/srs_cfg_update.sh
-    class late_start
-    user root
-    group root
-    oneshot
-    seclabel u:r:srs_update:s0
-	#Gionee huping 20160513 modify for CR01694612 end
-service mobile_log_d /system/bin/mobile_log_d
-    class main
-# MTK PR_DEBUG SWITCH
-on property:debug.MB.prdebug=1
-    write /sys/kernel/debug/dynamic_debug/control "file *mediatek* +p"
-    write /sys/kernel/debug/dynamic_debug/control "file *gpu* -p"
-on property:debug.MB.prdebug=0
-    write /sys/kernel/debug/dynamic_debug/control "file *mediatek* -p"
-
-service met_log_d /system/bin/met_log_d
-    class main
 
 # bugreport is triggered by holding down volume down, volume up and power
 service bugreport /system/bin/dumpstate -d -p -B \
@@ -906,13 +838,9 @@ service atcid-daemon-e /system/bin/atcid
 on property:persist.service.atci.usermode=1
     setprop persist.sys.usb.config mass_storage,adb,acm
 
-on property:ro.build.type=eng
-start atci_service
-start atcid-daemon-e
-
-on property:persist.service.atci.autostart=1
-start atci_service
-start atcid-daemon-u
+#on property:ro.build.type=eng
+#start atci_service
+#start atcid-daemon-e
 
 service audio-daemon /system/bin/audiocmdservice_atci
     class main
@@ -971,6 +899,9 @@ service wpa_supplicant /system/bin/wpa_supplicant \
     disabled
     oneshot
 
+#
+# MTK Wi-Fi related services (End)
+#
 
 service dhcpcd_bt-pan /system/bin/dhcpcd -BK -dd
     class main
@@ -1013,7 +944,7 @@ service dhcp_inform /system/bin/dhcpcd -s -BK -A
     group system radio dhcp net_admin net_raw
     disabled
     oneshot
-
+	
 service dhcpv6_inform /system/bin/dhcp6c -c "/etc/wide-dhcpv6/dhcp6cSIP.conf" -Dfi
     class main
     user root
@@ -1144,12 +1075,6 @@ service pppd_gprs /system/bin/pppd_dt /dev/ttyACM0 debug noauth refuse-eap usepe
     disabled
     oneshot
 
-##Add by T.Zh for ppp daemon
-#service pppd /system/bin/pppd file /data/misc/ppp/ppp_options
-#    user root
-#    disabled
-#    oneshot
-#
 ##
 #
 #  Modem related services (End)
@@ -1244,9 +1169,8 @@ service md_monitor /system/bin/md_monitor
     class main
     user system
     group system radio sdcard_rw inet sdcard_r media_rw
-
 #
-#sensor service (begin)
+# sensor service (begin)
 #
 
 service msensord /system/bin/msensord
@@ -1286,13 +1210,19 @@ service akmd8963 /system/bin/akmd8963
     user system
     group system
     class main
-#gionee lizhi modify for msensor begin
+
 service akmd09911 /system/bin/akmd09911
-# disabled
+    disabled
     user system
     group system
     class main
-#gionee lizhi modify for msensor end
+#lenovo-sw caoyi1 add begin
+service mxg2320d /system/bin/mxg2320d
+    disabled
+    user system
+    group system
+    class main
+#lenovo-sw caoyi1 add end
 service bmm050d /system/bin/bmm050d
     disabled
     user system
@@ -1343,18 +1273,12 @@ service mc64xxd /system/bin/mc64xxd
     group system
     class main
 #
-#sensor service (end)
+# sensor service (end)
 #
 
 #
-#emsvr service (start)
+# emsvr service (start)
 #
-on property:ro.build.type=eng
-    start emsvr
-
-on property:ro.build.type=user
-    start emsvr_user
-
 on property:ro.build.type=userdebug
     start emsvr_user
 
@@ -1369,13 +1293,8 @@ service emsvr /system/bin/em_svr
     group net_bt_stack
 
 #
-#emsvr service (end)
+# emsvr service (end)
 #
-
-service shutdown /system/bin/shutdown
-    user root
-    group root
-    disabled
 
 service NvRAMAgent /system/bin/nvram_agent_binder
     class main
@@ -1385,6 +1304,7 @@ service NvRAMAgent /system/bin/nvram_agent_binder
 service thermal_manager /system/bin/thermal_manager
     class main
     user root
+    group system
     oneshot
 
 service thermal /system/bin/thermal
@@ -1421,15 +1341,6 @@ service batterywarning /system/bin/batterywarning
     user shell
     group shell
 
-service backuprestore /system/bin/br_app_data_service
-	class main
-	socket backuprestore stream 0660 root sdcard_rw
-	user root
-
-#service BGW /system/xbin/BGW
-#	user system
-#	group gps system radio
-#	class main
 service MtkCodecService /system/bin/MtkCodecService
     class main
     user system
@@ -1492,6 +1403,7 @@ chmod 4755 /system/bin/pppd
 chown root /system/bin/chat
 chmod 4755 /system/bin/chat
 
+
 #
 #ril-daemon (begin)
 #
@@ -1540,6 +1452,14 @@ service program_binary /system/bin/program_binary_service
     group graphics
     oneshot
 
+#lenovo-sw, chenzz3, TEEI-P2, begin
+service fingerprintd /system/bin/fingerprintd
+    class main
+    user system
+    group system
+#lenovo-sw, chenzz3, TEEI-P2, end
+
+
 service vtservice /system/bin/vtservice
     class main
     socket soc_vt_tcv dgram 660 radio system
@@ -1549,9 +1469,4 @@ service vtservice /system/bin/vtservice
     user system
     group system camera graphics inet net_admin net_raw media sdcard_rw radio sdcard_r media_rw
     ioprio rt 4
-#gionee lizhi add for psensor calibration begin
-    service NvRAMBackupAgent /system/bin/nvram_backup_binder
-    class main
-    user system
-    group system
-#gionee lizhi add for psensor calibration end
+   

@@ -13,11 +13,9 @@ MTK_K64_SUPPORT := yes
 
 # Kernel properties
 #TARGET_KERNEL_SOURCE := kernel/gionee/wbl7511
-#TARGET_KERNEL_CONFIG := wbl7511_defconfig
+#TARGET_KERNEL_CONFIG := gionee6753_65u_m0_defconfig
 #BOARD_KERNEL_IMAGE_NAME := Image.gz-dtb
 #MTK_APPENDED_DTB_SUPPORT := yes
 
-
 #PreBuilt Kernel
-
 TARGET_PREBUILT_KERNEL=device/gionee/wbl7511/kernel
